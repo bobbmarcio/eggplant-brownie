@@ -16,23 +16,22 @@ class AdicionarRefeicao: UIViewController, UITableViewDataSource, UITableViewDel
     // MARK: - Atributos
     
     var delegate: AdicionarRefeicaoDelegate?
-    var itens: [Item] = [Item("Molho de tomate", 40.0),
-                         Item("Queijo", 40.0),
-                         Item("Molho Apimentado", 40.0),
-                         Item("Manjericão", 40.0)]
+    var itens: [Item] = []
     var itensSelecionados: [Item] = []
     
-    // MARK - IBOutlets
+    // MARK: - IBOutlets
     
     @IBOutlet var nomeTextField: UITextField?
     @IBOutlet var felicidadeTextField: UITextField?
-    @IBOutlet var itensTableView: UITableView!
+    @IBOutlet var itensTableView: UITableView?
     
     // MARK: - View Life Cycle
     
     override func viewDidLoad() {
         let botaoAdicionaItem = UIBarButtonItem(title: "adicionar", style: .plain, target: self, action: #selector(adicionarItens))
         navigationItem.rightBarButtonItem = botaoAdicionaItem
+        
+        itens = ItemDao().load()
     }
     
     @objc func adicionarItens() {
@@ -78,23 +77,28 @@ class AdicionarRefeicao: UIViewController, UITableViewDataSource, UITableViewDel
         }
     }
     
-    // MARK: - IBActions
-    
-    @IBAction func adicionar() {
-        
+    func recuperaRefeicaoDoFormulario() -> Refeicao? {
         guard let nomeDaRefeicao = nomeTextField?.text, let felicidadeDaRefeicao = felicidadeTextField?.text else {
-            print("A refeicão deve possuir um nome e felicidade.")
-            return
+            return nil
         }
         
         guard let felicidade = Int(felicidadeDaRefeicao) else {
-            print("A felicidade da refeicão deve ser um número.")
-            return
+            return nil
         }
         
         let refeicao = Refeicao(nome: nomeDaRefeicao, felicidade: felicidade, itens: itensSelecionados)
         
-        print("Comi \(refeicao.nome) e fiquei com felicidade: \(refeicao.felicidade)")
+        return refeicao
+    }
+    
+    // MARK: - IBActions
+    
+    @IBAction func adicionar() {
+        
+        guard let refeicao = recuperaRefeicaoDoFormulario() else {
+            Alerta(controller: self).exibe(alertaMessage: "Não foi possível recuperar a refeição e felicidade")
+            return
+        }
         
         delegate?.add(refeicao)
         
@@ -105,7 +109,15 @@ class AdicionarRefeicao: UIViewController, UITableViewDataSource, UITableViewDel
     
     func addItem(_ item: Item) {
         itens.append(item)
-        itensTableView.reloadData()
+        
+        ItemDao().save(itens)
+        
+        guard let tableView = itensTableView else {
+            Alerta(controller: self).exibe(alertaMessage: "Não foi possível atualizar a lista de itens")
+            return
+        }
+        
+        tableView.reloadData()
     }
 }
 
